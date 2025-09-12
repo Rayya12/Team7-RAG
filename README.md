@@ -10,10 +10,10 @@ Proyek ini adalah implementasi chatbot berbasis Retrieval-Augmented Generation (
 
 | **Name**                    | **Role**       |
 |-----------------------------|----------------|
-| Rafly Zulfikar AlKautsar    | Role 1         |
-| Rayya Syauqi Alulu'i        | Role 2         |
-| Zidane Surya Nugraha        | Role 3         |
-| Ukasyah                     | Role 4         |
+| Rafly Zulfikar AlKautsar    | UI/UX          |
+| Rayya Syauqi Alulu'i        | Project Manager|
+| Zidane Surya Nugraha        | Promt Engineer |
+| Ukasyah                     | BackendEngineer|
 
 
 ---
@@ -35,11 +35,11 @@ Proyek ini adalah implementasi chatbot berbasis Retrieval-Augmented Generation (
 
 **Backend:**
 - Next.js
-
+- Postgre SQL
 ---
 
 ## 🚀 How to Run the Project
-note: dont forget to create .env.local with your Gemini API Key in the folder
+note: dont forget to create .env with your Gemini API Key in the folder
 
 ### Step 1. Clone the Repository
 ```bash
@@ -54,25 +54,12 @@ npm install
 
 ### Step 3 Konfigurasi .env.local
 ```bash
-GOOGLE_API_KEY=...
-GMAIL_CLIENT_ID=...
-GMAIL_CLIENT_SECRET=...
-GMAIL_REDIRECT_URI=http://localhost:3000/api/chat/google/oauth/callback
-GMAIL_SENDER=...
-
-# Jangan di-commit ke Git!
-GMAIL_ACCESS_TOKEN=...
-GMAIL_REFRESH_TOKEN=...
-```
+DATABASE_URL=postgres://postgres:password@localhost:5432/dbName
+GOOGLE_GENERATIVE_AI_API_KEY=YOURAPIKEY
 
 ### Step 4 Jalankan Server
 ```bash
 npm run dev
-```
-
-### Step 5. Authorize Google Account
-```bash
-http://localhost:3000/api/chat/google/oauth/start
 ```
 
 ## 📋 Requirements (optional)
