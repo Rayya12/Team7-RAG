@@ -4,16 +4,14 @@ import { db } from '../db';
 import { cosineDistance, desc, gt, sql } from 'drizzle-orm';
 import { embeddings } from '../db/schema/embeddings';
 
-/** === KUNCI: samakan di semua tempat === */
-const EMBEDDING_DIM = 1536; // ganti ke 3072 kalau mau full
+
+const EMBEDDING_DIM = 1536;
 
 const embeddingModel = google.textEmbedding('gemini-embedding-001');
 
-/** Guard: pastikan panjang vector sesuai. Jika lebih panjang, slice. */
 const ensureDim = (v: number[]): number[] => {
   if (v.length === EMBEDDING_DIM) return v;
-  if (v.length > EMBEDDING_DIM) return v.slice(0, EMBEDDING_DIM); // quick fix
-  // kalau lebih pendek, lebih baik lempar error biar ketahuan
+  if (v.length > EMBEDDING_DIM) return v.slice(0, EMBEDDING_DIM); 
   throw new Error(`Embedding dim mismatch: got ${v.length}, expected ${EMBEDDING_DIM}`);
 };
 
@@ -35,9 +33,7 @@ export const generateEmbeddings = async (
     values: chunks,
     providerOptions: {
       google: {
-        // Penting: paksa keluar 1536 (atau 3072 sesuai konstanta)
         outputDimensionality: EMBEDDING_DIM,
-        // optional tapi bagus:
         taskType: 'RETRIEVAL_DOCUMENT',
       },
     },
@@ -45,7 +41,7 @@ export const generateEmbeddings = async (
 
   return out.map((e, i) => ({
     content: chunks[i],
-    embedding: ensureDim(e), // guard
+    embedding: ensureDim(e),
   }));
 };
 
