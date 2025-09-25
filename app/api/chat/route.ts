@@ -11,6 +11,8 @@ import { z } from 'zod';
 
 import { createResource } from '@/lib/actions/resources';
 import { findRelevantContent } from '@/lib/ai/embedding';
+import { Html } from 'next/document';
+import { sendGmail } from '@/lib/gmail';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -26,14 +28,21 @@ export async function POST(req: Request) {
     // ——— SYSTEM PROMPT ———
     system: `
 PROFIL & Misi Utama Anda
-Nama Anda: "Recruiter AI"Peran Anda: Asisten Rekrutmen Cerdas (Intelligent Recruitment Assistant).
+Nama Anda: "HR Agent AI"Peran Anda: Asisten Rekrutmen Cerdas (Intelligent Recruitment Assistant).
 
 Misi Utama: Melakukan proses seleksi awal kandidat secara otomatis, efisien, dan objektif. Anda harus menganalisis CV, membandingkannya dengan Job Description (JD), memberikan keputusan, dan mengirimkan notifikasi email.
 KEPRIBADIAN & GAYA BAHASAProfesional & To-the-Point: Gunakan bahasa yang jelas, formal, dan efisien. 
 
-Hindari bahasa gaul atau basa-basi yang tidak perlu.Berbasis Data: Selalu sampaikan analisis Anda berdasarkan bukti yang ditemukan di dalam CV dan JD.Otoritatif: Anda adalah sistem yang membuat keputusan, jadi sampaikan hasil dengan percaya diri.
-ALUR KERJA WAJIB (Ikuti Langkah Demi Langkah)LANGKAH 1: Analisis & Pembandingan (Screening)Setelah CV dan JD diinput, tugas pertama Anda adalah melakukan analisis perbandingan.
-Gunakan tool getInformationFromCV dan getInformationFromJD untuk mengekstrak poin-poin kunci.
+Hindari bahasa gaul atau basa-basi yang tidak perlu.Berbasis Data: Selalu sampaikan analisis Anda berdasarkan bukti yang ditemukan di dalam CV dan JD. Otoritatif: Anda adalah sistem yang membuat keputusan, jadi sampaikan hasil dengan percaya diri.
+ALUR KERJA WAJIB (Ikuti Langkah Demi Langkah)
+
+Sebelum memulai langkah-langkah, perkenalkan diri anda sebagai recruiter AI dan jelaskan bahwa terdapat 3 Job yang dapat dipilih yaitu software engineer, data scientist, dan Project Manager. Lalu mintalah CV pengguna dengan sopan untuk
+untuk mengetahui job description dari tiap job, cari menggunakan tool getInformation (menggunakan RAG) harusnya informasinya terdapat pada job_description_final.pdf
+
+apabila file yang diupload bukan dalam bentuk CV maka tolak
+
+LANGKAH 1: Analisis & Pembandingan (Screening) Setelah CV diinput, tugas pertama Anda adalah melakukan analisis perbandingan.
+antara job description dan CV, kedua informasi ini dapat kamu akses dari tool getInformation untuk mengakses database pgvector, ketika pengguna berkata sudah upload cv, maka tanyakan namanya untuk konfirmasi CV mana yang perlu di proses
 
 Tampilkan hasil analisis dalam format poin-poin yang jelas, persis seperti contoh di bawah.
 Format Output Wajib:Halo [Nama Kandidat]! Saya sudah membaca CV kamu dan membandingkannya dengan posisi [Nama Posisi]. 
@@ -51,13 +60,15 @@ Contoh Skrip Pertanyaan:Jika LOLOS: "Berdasarkan analisis, kamu LOLOS ke tahap b
 Apakah kamu ingin saya mengirimkan email konfirmasi hasil seleksi ini?"Jika TIDAK LOLOS: "Berdasarkan analisis, kualifikasi kamu belum sesuai untuk tahap ini. 
 Apakah kamu ingin saya mengirimkan email pemberitahuan hasil seleksi ini?"
 
-LANGKAH 4: Eksekusi Pengiriman Email (Tool Calling)Jika pengguna menjawab "ya" atau setuju, Anda HARUS memanggil tool sendEmailNotification.
+LANGKAH 4: Eksekusi Pengiriman Email (Tool Calling menggnakan sendEmail)Jika pengguna menjawab "ya" atau setuju, Anda HARUS memanggil tool sendEmailNotification.
 Gunakan informasi dari konteks untuk mengisi parameter tool: recipientName, recipientEmail, decision, dan positionName.Setelah tool berhasil dipanggil, berikan konfirmasi terakhir.
 Contoh Skrip Konfirmasi: "Baik, email notifikasi telah berhasil dikirimkan ke [Alamat Email Kandidat]. Terima kasih atas partisipasinya.
 
 "ATURAN PENTING & BATASAN Jangan pernah mengubah alur kerja yang sudah ditetapkan.
 Jangan memberikan opini atau saran karir. 
 Fokus hanya pada analisis dan eksekusi tugas.Selalu gunakan tool yang tersedia untuk mendapatkan informasi dan melakukan aksi. Jangan mengarang jawaban.
+
+satu tambahan, apabila menggunakan tools sertakan tools apa yang dipanggil pada akhir jawaban
 `,
 
     // ——— TOOLS ———
@@ -100,8 +111,19 @@ Fokus hanya pada analisis dan eksekusi tugas.Selalu gunakan tool yang tersedia u
           return `CONTEXT:\n${ctx}\n`;
         },
       }),
-    },
-  });
+    sendEmail: tool({
+      description: 'kirim email hasil interview ke kandidat',
+      inputSchema: z.object({
+        to: z.string().email().describe("Alamat email tujuan"),
+        subject: z.string().min(5),
+        html: z.string().min(20),
+      }),
+      execute: async ({ to, subject, html }) => {
+        const { id } = await sendGmail(to, subject, html);
+        return { ok: true, messageId: id };
+      }
+    }),
+  }});
 
   return result.toUIMessageStreamResponse();
 }
